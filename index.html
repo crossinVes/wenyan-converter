@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>文言文指令转换器</title>
+    <style>
+      :root {
+        --bg: #f6efe3;
+        --ink: #2f2519;
+        --muted: #6f6253;
+        --card: #fffaf2;
+        --line: #d8c8ad;
+        --accent: #8c5f30;
+        --accent-2: #5a3b1e;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Noto Serif SC", "Songti SC", "STSong", serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 90% 0%, rgba(140, 95, 48, 0.12), transparent 34%),
+          radial-gradient(circle at 0% 100%, rgba(90, 59, 30, 0.14), transparent 38%),
+          var(--bg);
+        min-height: 100vh;
+        padding: 24px;
+      }
+
+      .wrap {
+        max-width: 960px;
+        margin: 0 auto;
+      }
+
+      .card {
+        background: linear-gradient(180deg, #fffdf8 0%, var(--card) 100%);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        box-shadow: 0 12px 26px rgba(45, 31, 16, 0.08);
+        padding: 26px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(28px, 4vw, 42px);
+        letter-spacing: 0.08em;
+      }
+
+      .sub {
+        margin-top: 10px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .grid {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+
+      @media (min-width: 860px) {
+        .grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 180px;
+        resize: vertical;
+        border: 1px solid var(--line);
+        background: #fffcf6;
+        border-radius: 12px;
+        padding: 12px 14px;
+        font: inherit;
+        font-size: 16px;
+        line-height: 1.65;
+        color: var(--ink);
+      }
+
+      textarea:focus,
+      select:focus,
+      button:focus {
+        outline: 2px solid rgba(140, 95, 48, 0.26);
+        outline-offset: 2px;
+      }
+
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      select,
+      button {
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: #fff;
+        padding: 10px 12px;
+        font: inherit;
+      }
+
+      button {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+        cursor: pointer;
+        transition: transform 0.12s ease, filter 0.12s ease;
+      }
+
+      button:hover {
+        filter: brightness(0.96);
+        transform: translateY(-1px);
+      }
+
+      button[disabled] {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .meta {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .status {
+        margin-top: 10px;
+        min-height: 24px;
+        color: var(--muted);
+      }
+
+      .danger {
+        color: #b7322c;
+      }
+
+      .foot {
+        margin-top: 14px;
+        padding-top: 12px;
+        border-top: 1px dashed var(--line);
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      code {
+        background: #efe4d3;
+        border-radius: 6px;
+        padding: 1px 7px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <section class="card">
+        <h1>文言文指令转换器</h1>
+        <p class="sub">将现代中文指令转换为文言风格，或将文言改写为现代中文。默认使用模型转换，未配置密钥时自动退回本地规则。</p>
+
+        <div class="grid">
+          <div>
+            <label for="input">输入</label>
+            <textarea id="input" placeholder="例：请先总结这段文字，然后给我三条改进建议。"></textarea>
+            <div class="row">
+              <select id="mode">
+                <option value="to_classical">现代中文 → 文言文</option>
+                <option value="to_modern">文言文 → 现代中文</option>
+              </select>
+              <button id="convertBtn">开始转换</button>
+              <span id="engine" class="meta"></span>
+            </div>
+            <div id="status" class="status"></div>
+          </div>
+          <div>
+            <label for="output">输出</label>
+            <textarea id="output" readonly placeholder="转换结果会显示在这里"></textarea>
+          </div>
+        </div>
+
+        <div class="foot">
+          本工具仅用于语言表达与教学场景，不提供任何规避安全策略、攻击或违法用途支持。健康检查：<code>/api/health</code>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const inputEl = document.getElementById("input");
+      const outputEl = document.getElementById("output");
+      const modeEl = document.getElementById("mode");
+      const btnEl = document.getElementById("convertBtn");
+      const statusEl = document.getElementById("status");
+      const engineEl = document.getElementById("engine");
+
+      async function convert() {
+        const text = inputEl.value.trim();
+        if (!text) {
+          statusEl.textContent = "请先输入要转换的文本。";
+          statusEl.className = "status danger";
+          return;
+        }
+
+        btnEl.disabled = true;
+        statusEl.textContent = "转换中...";
+        statusEl.className = "status";
+        engineEl.textContent = "";
+
+        try {
+          const resp = await fetch("/api/convert", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              text,
+              mode: modeEl.value
+            })
+          });
+
+          const data = await resp.json();
+
+          if (!resp.ok || !data.ok) {
+            throw new Error(data.message || data.error || "转换失败");
+          }
+
+          outputEl.value = data.result || "";
+          engineEl.textContent = `引擎：${data.engine}`;
+          statusEl.textContent = data.warning ? `已完成（降级模式）：${data.warning}` : "已完成";
+          statusEl.className = "status";
+        } catch (err) {
+          statusEl.textContent = err.message || "转换失败，请稍后重试。";
+          statusEl.className = "status danger";
+        } finally {
+          btnEl.disabled = false;
+        }
+      }
+
+      btnEl.addEventListener("click", convert);
+      inputEl.addEventListener("keydown", (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+          convert();
+        }
+      });
+    </script>
+  </body>
+</html>

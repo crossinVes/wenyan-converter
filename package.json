@@ -1,0 +1,14 @@
+{
+  "name": "wenyan-converter",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "npx vercel dev --yes",
+    "deploy": "vercel deploy",
+    "deploy:prod": "vercel --prod"
+  },
+  "devDependencies": {
+    "vercel": "^50.42.0"
+  }
+}
