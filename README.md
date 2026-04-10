@@ -12,7 +12,7 @@
 wenyan-converter/
   api/
     _lib/
-      safety.js
+      persona.js
     convert.js
     health.js
   .env.example
@@ -87,10 +87,8 @@ npm run deploy:prod
 
 返回服务状态。
 
-## 安全说明
+## 人设模块
 
-本项目只做语言风格转换，显式拒绝越狱、规避安全策略、提示词攻击等用途。
-安全限制已集中到单文件：`api/_lib/safety.js`，可统一修改：
-- `DISALLOWED_INTENT_PATTERNS`：拦截规则
-- `DISALLOWED_INTENT_MESSAGE`：拦截返回文案
-- `TRANSFORM_SYSTEM_PROMPT`：模型安全系统提示词
+文风与角色集中在单文件：`api/_lib/persona.js`，可统一修改：
+- `SYSTEM_PROMPT`：模型人设提示词
+- `buildUserPrompt(text, mode)`：双向转换指令模板
